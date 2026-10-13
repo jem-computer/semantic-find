@@ -22,3 +22,27 @@ Update it with the installed version (replace the tag):
 ```sh
 git subtree pull --prefix=repos/effect https://github.com/Effect-TS/effect.git effect@<version> --squash
 ```
+
+### Foldkit (`repos/foldkit/`)
+
+Pinned to the `foldkit@0.166.0` tag to match `web/`'s installed `foldkit`.
+The 7-day `minimumReleaseAge` in `bunfig.toml` decides which release can be
+installed, so upgrade to the newest release at least a week old.
+
+- Read `web/FOLDKIT.md` before writing frontend code. Foldkit owns that file;
+  replace it whole from
+  `repos/foldkit/packages/create-foldkit-app/templates/base/FOLDKIT.md` after an
+  upgrade.
+- `repos/foldkit/examples/` and `repos/foldkit/packages/typing-game/` are the
+  quality bar.
+
+Update it with the installed version:
+
+```sh
+git subtree pull --prefix=repos/foldkit https://github.com/foldkit/foldkit.git foldkit@<version> --squash
+```
+
+## Frontend (`web/`)
+
+Before finishing a frontend change, run all four from `web/`:
+`bun run format`, `bun run lint`, `bun run typecheck`, `bun run test`.

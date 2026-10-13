@@ -4,8 +4,9 @@ Ask a document a question in plain English and get a heatmap of where the
 answer lives, plus a "not in this document" verdict when it isn't there.
 
 Built on [TypeSafe](https://docs.typesafe.ai)'s `jev-latest` System One model
-through Effect's `DecisionModel` (`@effect/ai-typesafe`), served as a
-Cloudflare Worker deployed with [Alchemy](https://alchemy.run).
+through Effect's `DecisionModel` (`@effect/ai-typesafe`). The frontend is a
+[Foldkit](https://foldkit.dev) app; both deploy to Cloudflare Workers with
+[Alchemy](https://alchemy.run).
 
 ## Run
 
@@ -14,14 +15,28 @@ Requires [Bun](https://bun.sh) and a TypeSafe API key.
 ```sh
 bun install
 cp .env.example .env   # then set TYPESAFE_API_KEY
-bun run dev            # local Worker on http://localhost:1337
-bun run test
-bun run typecheck
+bun run dev            # app + API on http://localhost:1337 (Vite HMR)
+bun run test           # API tests
+bun run typecheck      # API typecheck
+```
+
+The Foldkit app has its own checks, run from `web/`:
+
+```sh
+cd web
+bun run format && bun run lint && bun run typecheck && bun run test
 ```
 
 Deploy with `bun run deploy` (needs a Cloudflare login; `TYPESAFE_API_KEY` is
-read from your environment and bound to the Worker as a secret). Tear down
+read from your environment and bound to the API Worker as a secret). Tear down
 with `bun run destroy`.
+
+Two Workers deploy (`alchemy.run.ts`):
+
+- **Website**: the Foldkit app's static build, plus a small Worker
+  (`web/worker/worker.ts`) that runs only for `/api/*` and forwards those
+  requests to the API Worker over a service binding.
+- **Worker**: the Effect API (`lib/RouterWorker.ts`), with no public URL.
 
 ## How it works
 
@@ -46,7 +61,7 @@ API key stays out of the browser.
 - Both modes carry a paired **exists** `Decision.probability` ("does any line
   address this?"). A classify always selects some line, so this is the signal that decides
   whether the answer is present at all.
-- The verdict is three-way in `public/app.js`: answered (exists ≥ 0.7),
+- The verdict is three-way in `web/src/domain/search.ts`: answered (exists ≥ 0.7),
   partially addressed, or not in this document (exists < 0.35).
 
 Choice mode returns in roughly 0.3 s on a ~200-line document; score mode
@@ -77,7 +92,8 @@ verbatim, with indentation preserved and syntax highlighting.
 
 - `alchemy.run.ts`: the Alchemy stack (deploys the Worker)
 - `lib/RouterWorker.ts`: the Worker: assets, secret, and layer wiring
-- `lib/Routes.ts`: HTTP routes and the session-cookie page route
+- `lib/Routes.ts`: HTTP routes, including `POST /api/session`, which the app
+  calls at boot to get a fresh paste session per page load
 - `lib/Search.ts`: `Search` service and the TypeSafe decision definitions
 - `lib/Documents.ts`: `Documents` service (sample catalog + pastes)
 - `lib/PasteStore.ts`: the pasted-documents contract (+ in-memory version for tests)
@@ -85,4 +101,9 @@ verbatim, with indentation preserved and syntax highlighting.
 - `lib/Document.ts`: document schema and errors
 - `docs/index.ts`: bundles the sample docs into the Worker
 - `lib/chunk.ts`: text and code → lines
-- `public/`: vanilla JS frontend (document view, heatmap, minimap)
+- `web/`: the Foldkit frontend (own package in a Bun workspace, because
+  Foldkit pins `effect` 4.0.0 while the API uses 4.0.1)
+  - `src/main.ts`: init, update, Subscriptions; `src/view/`: views
+  - `src/command.ts`: API calls, scrolling, the line flash timer
+  - `src/domain/`: heat maths, minimap layout, inline markdown, highlighting
+  - `worker/worker.ts`: forwards `/api/*` to the API Worker

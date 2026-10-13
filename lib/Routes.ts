@@ -1,9 +1,8 @@
 // HTTP surface. Handlers stay thin: decode the request, call Documents or
 // Search, and map typed failures to the plain-text error bodies the frontend
-// shows as-is. Static files in public/ never reach these routes: Cloudflare's
-// asset layer serves them (see lib/RouterWorker.ts).
+// shows as-is. The Foldkit app (web/) is served by its own Worker, which
+// forwards /api/* here.
 
-import * as Cloudflare from "alchemy/Cloudflare";
 import { Duration, Effect, Layer, Schema } from "effect";
 import { HttpRouter, HttpServerRequest, HttpServerResponse } from "effect/http";
 import { Documents, PasteInput } from "./Documents";
@@ -104,25 +103,23 @@ const ApiRoutes = HttpRouter.use(
   }),
 );
 
-// The page itself, routed worker-first. Every load gets a fresh session
-// cookie, which scopes pasted documents to this visit.
-const page = Effect.gen(function* () {
-  const env = yield* Cloudflare.WorkerEnvironment;
-  const request = yield* Cloudflare.Request;
-  const asset = yield* Effect.promise((): Promise<Response> => env.ASSETS.fetch(request));
-  return yield* HttpServerResponse.setCookie(HttpServerResponse.fromWeb(asset), SESSION_COOKIE, crypto.randomUUID(), {
-    path: "/",
-    httpOnly: true,
-    sameSite: "lax",
-    maxAge: "1 day",
-  });
-}).pipe(Effect.orDie);
-
-const PageRoutes = HttpRouter.use(
+// Every page load starts a fresh session, which scopes pasted documents to
+// that visit. The app calls this once when it boots.
+const SessionRoutes = HttpRouter.use(
   Effect.fn(function* (router) {
-    yield* router.add("GET", "/", page);
-    yield* router.add("GET", "/index.html", page);
+    yield* router.add(
+      "POST",
+      "/api/session",
+      Effect.suspend(() =>
+        HttpServerResponse.setCookie(HttpServerResponse.empty({ status: 204 }), SESSION_COOKIE, crypto.randomUUID(), {
+          path: "/",
+          httpOnly: true,
+          sameSite: "lax",
+          maxAge: "1 day",
+        }),
+      ).pipe(Effect.orDie),
+    );
   }),
 );
 
-export const Routes = Layer.mergeAll(ApiRoutes, PageRoutes);
+export const Routes = Layer.mergeAll(ApiRoutes, SessionRoutes);

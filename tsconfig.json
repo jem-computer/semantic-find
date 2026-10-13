@@ -21,6 +21,7 @@
     "alchemy.run.ts",
     "lib",
     "docs",
-    "test"
+    "test",
+    "web/worker"
   ]
 }

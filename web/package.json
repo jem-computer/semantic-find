@@ -1,0 +1,33 @@
+{
+  "name": "semantic-find-web",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "typecheck": "tsc --noEmit",
+    "format": "oxfmt",
+    "lint": "oxlint src",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@effect/platform-browser": "4.0.0",
+    "@foldkit/ui": "0.166.0",
+    "clsx": "^2.1.1",
+    "effect": "4.0.0",
+    "foldkit": "0.166.0",
+    "highlight.js": "^11.11.1"
+  },
+  "devDependencies": {
+    "@foldkit/devtools": "0.166.0",
+    "@foldkit/oxlint-plugin": "0.15.2",
+    "@foldkit/vite-plugin": "0.26.1",
+    "happy-dom": "^20.14.5",
+    "oxfmt": "^0.65.0",
+    "oxlint": "^1.0.0",
+    "typescript": "^7.0.2",
+    "vite": "^8.3.1",
+    "vitest": "^5.0.2"
+  }
+}

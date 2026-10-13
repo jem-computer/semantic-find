@@ -1,0 +1,6 @@
+export const MINIMAP_ID = 'minimap'
+export const PASTE_TEXT_ID = 'paste-text'
+export const PASTE_TITLE_ID = 'paste-title'
+export const QUERY_ID = 'query'
+export const DOC_SELECT_ID = 'doc-select'
+export const DOC_SCROLL_ID = 'doc-scroll'

@@ -1,4 +1,4 @@
-// Shared line-preparation logic: the "line" is the unit TypeSafe scores.
+// Shared line-preparation logic: the "line" is the unit Clef scores.
 // Used by the paste-a-document endpoint.
 
 export const MAX_CHUNK = 560; // chars before a paragraph splits at sentence boundaries

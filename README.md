@@ -3,18 +3,22 @@
 Ask a document a question in plain English and get a heatmap of where the
 answer lives, plus a "not in this document" verdict when it isn't there.
 
-Built on [TypeSafe](https://docs.typesafe.ai)'s `jev-latest` System One model
-through Effect's `DecisionModel` (`@effect/ai-typesafe`). The frontend is a
+Built on Cloudflare's [Clef](https://developers.cloudflare.com/workers-ai/models/clef/)
+decision model, called through the Workers AI binding with Effect's
+`DecisionModel` (`@effect/ai-cloudflare`). The frontend is a
 [Foldkit](https://foldkit.dev) app; both deploy to Cloudflare Workers with
 [Alchemy](https://alchemy.run).
 
 ## Run
 
-Requires [Bun](https://bun.sh) and a TypeSafe API key.
+Requires [Bun](https://bun.sh) and a Cloudflare account. Workers AI has no
+local emulator, so even `bun run dev` sends Clef requests to your account
+(add Cloudflare to your Alchemy profile once with
+`bunx alchemy profile edit --profile default --add Cloudflare`). No other
+secrets are needed.
 
 ```sh
 bun install
-cp .env.example .env   # then set TYPESAFE_API_KEY
 bun run dev            # app + API on http://localhost:1337 (Vite HMR)
 bun run test           # API tests
 bun run typecheck      # API typecheck
@@ -27,25 +31,25 @@ cd web
 bun run format && bun run lint && bun run typecheck && bun run test
 ```
 
-Deploy with `bun run deploy` (needs a Cloudflare login; `TYPESAFE_API_KEY` is
-read from your environment and bound to the API Worker as a secret). Tear down
-with `bun run destroy`.
+Deploy with `bun run deploy`; tear down with `bun run destroy`.
 
 Two Workers deploy (`alchemy.run.ts`):
 
 - **Website**: the Foldkit app's static build, plus a small Worker
   (`web/worker/worker.ts`) that runs only for `/api/*` and forwards those
   requests to the API Worker over a service binding.
-- **Worker**: the Effect API (`lib/RouterWorker.ts`), with no public URL.
+- **Worker**: the Effect API (`lib/RouterWorker.ts`), with no public URL and a
+  Workers AI binding.
 
 ## How it works
 
-All TypeSafe usage lives in `lib/Search.ts`, as `Decision` definitions
-answered by the `DecisionModel` service. The server proxies searches so the
-API key stays out of the browser.
+Searches are `Decision` definitions in `lib/Search.ts`, answered by the
+`DecisionModel` service. `lib/ClefDecisionModel.ts` provides it: the
+`@effect/ai-cloudflare` Clef model with its REST client swapped for one that
+calls the Workers AI binding. The binding only works during a request, so the
+model is provided per request.
 
-- The **whole line-tagged document** is the request's state, one request per
-  search. Each line is prefixed with an id (`L000| ...`). Lines are judged
+- The **whole line-tagged document** is the request's state. Each line is prefixed with an id (`L000| ...`). Lines are judged
   with the full document as context, so answers that depend on a definition
   elsewhere in the document still resolve.
 - Two search modes, toggleable in the UI:
@@ -53,7 +57,9 @@ API key stays out of the browser.
     probability distribution *is* the heatmap. Probabilities sum to 1, so
     lines are ranked against each other. Suits pinpointing a single answer.
   - **score each line (Score, absolute)**: one `Decision.rate` per line
-    against a 4-level relevance rubric, all in the same request. Every line
+    against a 4-level relevance rubric. Clef answers at most 64 questions
+    per request, so longer documents are rated in parallel batches, each
+    sending the whole document as context. Every line
     gets an independent reading, so whole evidence chains light up (try
     "what was the root cause of the outage?" on the incident log). Heat reads
     the level probabilities (`P(direct) + 0.4·P(context)`) rather than the
@@ -64,8 +70,6 @@ API key stays out of the browser.
 - The verdict is three-way in `web/src/domain/search.ts`: answered (exists ≥ 0.7),
   partially addressed, or not in this document (exists < 0.35).
 
-Choice mode returns in roughly 0.3 s on a ~200-line document; score mode
-(one question per line) in roughly 0.5–1.5 s.
 
 ## Documents
 
@@ -94,7 +98,8 @@ verbatim, with indentation preserved and syntax highlighting.
 - `lib/RouterWorker.ts`: the Worker: assets, secret, and layer wiring
 - `lib/Routes.ts`: HTTP routes, including `POST /api/session`, which the app
   calls at boot to get a fresh paste session per page load
-- `lib/Search.ts`: `Search` service and the TypeSafe decision definitions
+- `lib/Search.ts`: `Search` service and the decision definitions
+- `lib/ClefDecisionModel.ts`: Clef over the Workers AI binding
 - `lib/Documents.ts`: `Documents` service (sample catalog + pastes)
 - `lib/PasteStore.ts`: the pasted-documents contract (+ in-memory version for tests)
 - `lib/PasteSession.ts`: the per-session Durable Object behind it

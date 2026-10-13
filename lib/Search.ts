@@ -6,13 +6,15 @@
 //     so they rank lines against each other.
 //   score (absolute) — one Rate per line against a fixed relevance rubric.
 //     Every line gets an independent reading; nothing is forced to win.
+//     Clef answers at most 64 questions per request, so longer documents are
+//     rated in parallel batches, each sending the whole document as context.
 //
 // Both modes carry the same paired probability ("does any such line exist?"),
 // which decides whether the answer is present at all.
 // Lines are judged with the full document as context, so an answer that
 // depends on a definition elsewhere in the document still resolves.
 
-import { Context, Effect, Layer, Schema } from "effect";
+import { Array, Context, Effect, Layer, Schema } from "effect";
 import { AiError, Decision, DecisionModel } from "effect/ai";
 import type { Doc } from "./Document";
 
@@ -83,8 +85,11 @@ const choiceDefinition = (doc: Doc, query: string, ids: ReadonlyArray<LineId>) =
     },
   });
 
-const scoreDefinition = (doc: Doc, query: string, ids: ReadonlyArray<LineId>) => {
-  const perLine: Record<LineId, Decision.Rate<Relevance>> = Object.fromEntries(
+// Clef's per-request question limit. The first batch also carries `exists`.
+export const MAX_QUESTIONS = 64;
+
+const rateLines = (query: string, ids: ReadonlyArray<LineId>): Record<LineId, Decision.Rate<Relevance>> =>
+  Object.fromEntries(
     ids.map((id) => [
       id,
       Decision.rate({
@@ -93,12 +98,23 @@ const scoreDefinition = (doc: Doc, query: string, ids: ReadonlyArray<LineId>) =>
       }),
     ]),
   );
+
+const scoreDefinition = (doc: Doc, query: string, ids: ReadonlyArray<LineId>) => {
   const decisions: { readonly exists: Decision.Probability } & Record<LineId, Decision.Rate<Relevance>> = {
-    ...perLine,
+    ...rateLines(query, ids),
     exists: exists(doc, query),
   };
   return Decision.make({ input: Schema.String, decisions });
 };
+
+const rateDefinition = (query: string, ids: ReadonlyArray<LineId>) =>
+  Decision.make({ input: Schema.String, decisions: rateLines(query, ids) });
+
+const addUsage = (a: DecisionModel.DecisionUsage, b: DecisionModel.DecisionUsage) =>
+  new DecisionModel.DecisionUsage({
+    inputTokens: (a.inputTokens ?? 0) + (b.inputTokens ?? 0),
+    outputTokens: (a.outputTokens ?? 0) + (b.outputTokens ?? 0),
+  });
 
 export class Search extends Context.Service<
   Search,
@@ -107,15 +123,14 @@ export class Search extends Context.Service<
       doc: Doc,
       query: string,
       mode: SearchMode,
-    ) => Effect.Effect<SearchResult, AiError.AiError | TooFewLines>;
+    ) => Effect.Effect<SearchResult, AiError.AiError | TooFewLines, DecisionModel.DecisionModel>;
   }
 >()("semantic-find/Search") {
-  static readonly layer = Layer.effect(
+  static readonly layer = Layer.succeed(
     Search,
-    Effect.gen(function* () {
-      const model = yield* DecisionModel.DecisionModel;
-
-      const run = Effect.fn("Search.run")(function* (doc: Doc, query: string, mode: SearchMode) {
+    Search.of({
+      // The decision model is provided per request (lib/RouterWorker.ts).
+      run: Effect.fn("Search.run")(function* (doc: Doc, query: string, mode: SearchMode) {
         yield* Effect.annotateCurrentSpan({ docId: doc.id, mode });
         const input = doc.lines.map((l, i) => `${lineId(i)}| ${l}`).join("\n");
         // Blank lines (kept in code docs for display fidelity) aren't judged.
@@ -126,7 +141,7 @@ export class Search extends Context.Service<
           if (ids.length < 2) {
             return yield* new TooFewLines({ message: "choice mode needs at least two non-blank lines" });
           }
-          const { answers, usage } = yield* model.decide(choiceDefinition(doc, query, ids), { input });
+          const { answers, usage } = yield* DecisionModel.decide(choiceDefinition(doc, query, ids), { input });
           const probs = answers.where.probabilities;
           return {
             mode,
@@ -136,16 +151,31 @@ export class Search extends Context.Service<
           };
         }
 
-        const { answers, usage } = yield* model.decide(scoreDefinition(doc, query, ids), { input });
+        const firstIds = ids.slice(0, MAX_QUESTIONS - 1);
+        const restBatches = Array.chunksOf(ids.slice(MAX_QUESTIONS - 1), MAX_QUESTIONS);
+        const { first, rest } = yield* Effect.all(
+          {
+            first: DecisionModel.decide(scoreDefinition(doc, query, firstIds), { input }),
+            rest: Effect.forEach(restBatches, (batch) => DecisionModel.decide(rateDefinition(query, batch), { input }), {
+              concurrency: "unbounded",
+            }),
+          },
+          { concurrency: "unbounded" },
+        );
+
+        const heatById = new Map<string, number>();
+        for (const { answers } of [first, ...rest]) {
+          for (const [id, answer] of Object.entries(answers)) {
+            if ("probabilities" in answer) heatById.set(id, scoreHeat(answer.probabilities));
+          }
+        }
         return {
           mode,
-          exists: answers.exists.probability,
-          scores: doc.lines.map((_, i) => (judged[i] ? scoreHeat(answers[lineId(i)].probabilities) : 0)),
-          usage,
+          exists: first.answers.exists.probability,
+          scores: doc.lines.map((_, i) => heatById.get(lineId(i)) ?? 0),
+          usage: rest.reduce((total, { usage }) => addUsage(total, usage), first.usage),
         };
-      });
-
-      return Search.of({ run });
+      }),
     }),
   );
 }

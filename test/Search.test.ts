@@ -2,7 +2,7 @@ import { describe, expect, test } from "bun:test";
 import { Effect, Layer } from "effect";
 import { Decision, DecisionModel } from "effect/ai";
 import type { Doc } from "../lib/Document";
-import { Search, type SearchMode } from "../lib/Search";
+import { MAX_QUESTIONS, Search, type SearchMode } from "../lib/Search";
 
 const doc = (lines: ReadonlyArray<string>, kind: Doc["kind"] = "code"): Doc => ({
   id: "fixture",
@@ -34,7 +34,7 @@ const harness = (respond: (options: DecisionModel.ProviderOptions) => DecisionMo
       Effect.gen(function* () {
         return yield* (yield* Search).run(d, query, mode);
       }).pipe(
-        Effect.provide(Search.layer.pipe(Layer.provide(model))),
+        Effect.provide(Layer.merge(Search.layer, model)),
       ),
     );
   const runFailure = (d: Doc, query: string, mode: SearchMode) =>
@@ -42,7 +42,7 @@ const harness = (respond: (options: DecisionModel.ProviderOptions) => DecisionMo
       Effect.gen(function* () {
         return yield* Effect.flip((yield* Search).run(d, query, mode));
       }).pipe(
-        Effect.provide(Search.layer.pipe(Layer.provide(model))),
+        Effect.provide(Layer.merge(Search.layer, model)),
       ),
     );
   return { calls, run, runFailure };
@@ -191,5 +191,46 @@ describe("exists question", () => {
     await h.run(doc(["a", "b"], "prose"), "who wins?", "choice");
 
     expect(h.calls[0].decisions.exists.instructions).toContain("address or answer");
+  });
+});
+
+describe("score mode batching", () => {
+  const manyLines = Array.from({ length: 150 }, (_, i) => `line ${i}`);
+
+  const respondToBatch = (options: DecisionModel.ProviderOptions): DecisionModel.ProviderResponse => ({
+    answers: Object.fromEntries(
+      Object.entries(options.decisions).map(([key, decision]) =>
+        decision._tag === "Probability"
+          ? [key, { _tag: "Probability" as const, probability: 0.6 }]
+          : [
+              key,
+              {
+                _tag: "Rate" as const,
+                rating: 3,
+                probabilities: Object.fromEntries(levelsOf(decision).map((level, i) => [level, i === 3 ? 1 : 0])),
+              },
+            ],
+      ),
+    ),
+    usage: { inputTokens: 100, outputTokens: 1 },
+  });
+
+  test(`splits a long document into batches of at most ${MAX_QUESTIONS} questions`, async () => {
+    const h = harness(respondToBatch);
+    const result = await h.run(doc(manyLines, "prose"), "q", "score");
+
+    expect(h.calls.length).toBe(3);
+    for (const { decisions } of h.calls) expect(Object.keys(decisions).length).toBeLessThanOrEqual(MAX_QUESTIONS);
+    expect(h.calls.filter(({ decisions }) => "exists" in decisions)).toHaveLength(1);
+    expect(result.scores).toEqual(manyLines.map(() => 1));
+    expect(result.exists).toBe(0.6);
+    expect(result.usage.inputTokens).toBe(300);
+  });
+
+  test("a short document is one request", async () => {
+    const h = harness(respondToBatch);
+    await h.run(doc(manyLines.slice(0, MAX_QUESTIONS - 1), "prose"), "q", "score");
+
+    expect(h.calls.length).toBe(1);
   });
 });

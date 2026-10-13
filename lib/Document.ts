@@ -1,5 +1,5 @@
 // The document model shared by the catalog, pasted documents, and search.
-// A document is a list of lines; the line is the unit TypeSafe judges.
+// A document is a list of lines; the line is the unit Clef judges.
 
 import { Schema } from "effect";
 

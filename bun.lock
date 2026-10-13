@@ -5,7 +5,7 @@
     "": {
       "name": "demo-semantic-find",
       "dependencies": {
-        "@effect/ai-typesafe": "4.0.1",
+        "@effect/ai-cloudflare": "4.0.1",
         "@effect/platform-bun": "4.0.1",
         "@effect/platform-node": "4.0.1",
         "alchemy": "^2.0.0-beta.81",
@@ -104,7 +104,7 @@
 
     "@distilled.cloud/zerossl": ["@distilled.cloud/zerossl@1.0.0-rc.13", "", { "dependencies": { "@distilled.cloud/core": "1.0.0-rc.13" }, "peerDependencies": { "effect": "^4.0.0" } }, "sha512-dnxhg39lZjpTdZbHCVYPoUC9E2r8eSHbqiYDhSq2EurVPJcc9YRXlxZR1bP1nniSp078XV8GA+aUECt/Z56aQg=="],
 
-    "@effect/ai-typesafe": ["@effect/ai-typesafe@4.0.1", "", { "peerDependencies": { "effect": "^4.0.1" } }, "sha512-jZ4cpx2aVAtMDSx3tHNNFWu8uGHWvaHxYmz8Tdj3zme9XiN+jru3kuSrXHJ9XgsUSQh1g8NalXniuoCj2ayq0g=="],
+    "@effect/ai-cloudflare": ["@effect/ai-cloudflare@4.0.1", "", { "peerDependencies": { "effect": "^4.0.1" } }, "sha512-UNB6A0AouDbjX5Lpg9xSHSJjxCE80C/FTIFfSu82I/XGdRHF6PV+k7JCR19L/0cNNM7GxnXOBqpDkyVCImRE+A=="],
 
     "@effect/platform-browser": ["@effect/platform-browser@4.0.0", "", { "peerDependencies": { "effect": "^4.0.0" } }, "sha512-OHo7EPpF3RVPiI+mjoU9yd05LdCdKPjzDXqs5wRgF9CsdVvwN76B0zgt54DxPUcvMYri1tVJOtLCVnK0tRkNQQ=="],
 

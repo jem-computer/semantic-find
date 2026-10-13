@@ -3,10 +3,17 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "bun --env-file=.env server.ts"
+    "dev": "bun --env-file=.env server.ts",
+    "typecheck": "tsc",
+    "test": "bun test"
   },
   "dependencies": {
-    "@typesafe-ai/sdk": "0.6.0",
-    "effect": "^4.0.1"
+    "@effect/ai-typesafe": "4.0.1",
+    "@effect/platform-bun": "4.0.1",
+    "effect": "4.0.1"
+  },
+  "devDependencies": {
+    "@types/bun": "^1.4.2",
+    "typescript": "^7.0.2"
   }
 }

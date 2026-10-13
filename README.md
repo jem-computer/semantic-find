@@ -3,9 +3,9 @@
 Ask a document a question in plain English and get a heatmap of where the
 answer lives, plus a "not in this document" verdict when it isn't there.
 
-Built on [TypeSafe](https://docs.typesafe.ai) with the
-[`@typesafe-ai/sdk`](https://docs.typesafe.ai/sdk/javascript) JavaScript SDK
-and the `jev-latest` System One model.
+Built on [TypeSafe](https://docs.typesafe.ai)'s `jev-latest` System One model
+through Effect's `DecisionModel` (`@effect/ai-typesafe`), served with
+`@effect/platform-bun`.
 
 ## Run
 
@@ -15,31 +15,33 @@ Requires [Bun](https://bun.sh) and a TypeSafe API key.
 bun install
 cp .env.example .env   # then set TYPESAFE_API_KEY
 bun run dev
+bun run typecheck
 ```
 
 Serves on http://localhost:4310 (override with `PORT`).
 
 ## How it works
 
-All TypeSafe usage lives in `search()` in `server.ts`. The server proxies
-searches so the API key stays out of the browser.
+All TypeSafe usage lives in `lib/Search.ts`, as `Decision` definitions
+answered by the `DecisionModel` service. The server proxies searches so the
+API key stays out of the browser.
 
 - The **whole line-tagged document** is the request's state, one request per
   search. Each line is prefixed with an id (`L000| ...`). Lines are judged
   with the full document as context, so answers that depend on a definition
   elsewhere in the document still resolve.
 - Two search modes, toggleable in the UI:
-  - **which line? (Choice, relative)**: one Choice over every line id. Its
+  - **which line? (Choice, relative)**: one `Decision.classify` over every line id. Its
     probability distribution *is* the heatmap. Probabilities sum to 1, so
     lines are ranked against each other. Suits pinpointing a single answer.
-  - **score each line (Score, absolute)**: one Score question per line
+  - **score each line (Score, absolute)**: one `Decision.rate` per line
     against a 4-level relevance rubric, all in the same request. Every line
     gets an independent reading, so whole evidence chains light up (try
     "what was the root cause of the outage?" on the incident log). Heat reads
     the level probabilities (`P(direct) + 0.4·P(context)`) rather than the
     expected score, which compresses toward the middle on topical documents.
-- Both modes carry a paired **exists** Noul ("does any line address this?").
-  A Choice always selects some line, so the Noul is the signal that decides
+- Both modes carry a paired **exists** `Decision.probability` ("does any line
+  address this?"). A classify always selects some line, so this is the signal that decides
   whether the answer is present at all.
 - The verdict is three-way in `public/app.js`: answered (exists ≥ 0.7),
   partially addressed, or not in this document (exists < 0.35).
@@ -69,7 +71,11 @@ verbatim, with indentation preserved and syntax highlighting.
 
 ## Layout
 
-- `server.ts`: Bun server, static files, and the TypeSafe request
+- `server.ts`: layer wiring and entry point (`Layer.launch`)
+- `lib/Routes.ts`: HTTP routes, session cookie, static files
+- `lib/Search.ts`: `Search` service and the TypeSafe decision definitions
+- `lib/Documents.ts`: `Documents` service (sample catalog + pastes)
+- `lib/PasteStore.ts`: per-session pasted documents
+- `lib/Document.ts`: document schema and errors
 - `lib/chunk.ts`: text and code → lines
-- `lib/paste-store.ts`: per-session pasted documents
 - `public/`: vanilla JS frontend (document view, heatmap, minimap)

@@ -424,7 +424,7 @@ $("paste-form").addEventListener("submit", async (e) => {
     $("paste-text").value = "";
     $("paste-hint").textContent = newDoc.truncated
       ? `kept first ${newDoc.lines.length} lines`
-      : "private to this visit · kept in memory only, never written to disk";
+      : "private to this visit · deleted after 2 idle hours";
     await loadDocList(newDoc.id);
   } catch (err) {
     $("paste-hint").textContent = String(err).slice(0, 120);

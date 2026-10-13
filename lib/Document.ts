@@ -17,6 +17,24 @@ export const Doc = Schema.Struct({
 });
 export interface Doc extends Schema.Schema.Type<typeof Doc> {}
 
+// A pasted document before its store numbers it. Numbers are per session, so
+// ids only need to be unique within one visitor's pastes.
+export interface PasteDraft {
+  readonly title: string;
+  readonly kind: DocKind;
+  readonly lines: ReadonlyArray<string>;
+}
+
+export const toPastedDoc = (n: number, draft: PasteDraft): Doc => ({
+  id: `pasted-${n}`,
+  title: draft.title || `Pasted document ${n}`,
+  source: "pasted (this visit only)",
+  url: "",
+  kind: draft.kind,
+  lines: draft.lines,
+  pasted: true,
+});
+
 export class DocNotFound extends Schema.TaggedError<DocNotFound>()("DocNotFound", {
   id: Schema.String,
 }) {}

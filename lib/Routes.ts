@@ -1,9 +1,11 @@
 // HTTP surface. Handlers stay thin: decode the request, call Documents or
 // Search, and map typed failures to the plain-text error bodies the frontend
-// shows as-is.
+// shows as-is. Static files in public/ never reach these routes: Cloudflare's
+// asset layer serves them (see lib/RouterWorker.ts).
 
-import { Duration, Effect, Layer, Path, Schema } from "effect";
-import { HttpRouter, HttpServerRequest, HttpServerResponse, HttpStaticServer } from "effect/http";
+import * as Cloudflare from "alchemy/Cloudflare";
+import { Duration, Effect, Layer, Schema } from "effect";
+import { HttpRouter, HttpServerRequest, HttpServerResponse } from "effect/http";
 import { Documents, PasteInput } from "./Documents";
 import { Search, SearchMode } from "./Search";
 
@@ -102,31 +104,25 @@ const ApiRoutes = HttpRouter.use(
   }),
 );
 
-// The page itself. Every load gets a fresh session cookie, which scopes
-// pasted documents to this visit.
+// The page itself, routed worker-first. Every load gets a fresh session
+// cookie, which scopes pasted documents to this visit.
+const page = Effect.gen(function* () {
+  const env = yield* Cloudflare.WorkerEnvironment;
+  const request = yield* Cloudflare.Request;
+  const asset = yield* Effect.promise((): Promise<Response> => env.ASSETS.fetch(request));
+  return yield* HttpServerResponse.setCookie(HttpServerResponse.fromWeb(asset), SESSION_COOKIE, crypto.randomUUID(), {
+    path: "/",
+    httpOnly: true,
+    sameSite: "lax",
+    maxAge: "1 day",
+  });
+}).pipe(Effect.orDie);
+
 const PageRoutes = HttpRouter.use(
   Effect.fn(function* (router) {
-    const path = yield* Path.Path;
-    const index = path.join(import.meta.dir, "..", "public", "index.html");
-    const page = Effect.gen(function* () {
-      const res = yield* HttpServerResponse.file(index, { contentType: "text/html; charset=utf-8" });
-      return yield* HttpServerResponse.setCookie(res, SESSION_COOKIE, crypto.randomUUID(), {
-        path: "/",
-        httpOnly: true,
-        sameSite: "lax",
-        maxAge: "1 day",
-      });
-    });
     yield* router.add("GET", "/", page);
     yield* router.add("GET", "/index.html", page);
   }),
 );
 
-const StaticFiles = Layer.unwrap(
-  Effect.gen(function* () {
-    const path = yield* Path.Path;
-    return HttpStaticServer.layer({ root: path.join(import.meta.dir, "..", "public"), index: undefined });
-  }),
-);
-
-export const Routes = Layer.mergeAll(ApiRoutes, PageRoutes, StaticFiles);
+export const Routes = Layer.mergeAll(ApiRoutes, PageRoutes);

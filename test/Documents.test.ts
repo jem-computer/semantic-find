@@ -1,34 +1,27 @@
-import { BunServices } from "@effect/platform-bun";
 import { describe, expect, test } from "bun:test";
-import { Effect, FileSystem, Layer, Logger, Path } from "effect";
+import { Effect, Layer, Logger } from "effect";
+import { catalog } from "../docs";
 import { MAX_LINES, MAX_PASTE_CHARS } from "../lib/chunk";
 import { Documents } from "../lib/Documents";
 import { PasteStore } from "../lib/PasteStore";
 
-const docJson = (id: string, extra: object = {}) =>
-  JSON.stringify({ id, title: `Title ${id}`, source: "test", url: "", kind: "prose", lines: ["a", "b"], ...extra });
-
-// A docs/ directory served from memory, keyed by file name.
-const fakeDocsDir = (files: Record<string, string>) =>
-  Layer.mergeAll(
-    FileSystem.layerNoop({
-      readDirectory: () => Effect.succeed(Object.keys(files)),
-      readFileString: (path) => Effect.succeed(files[path.split("/").pop() ?? ""] ?? ""),
-    }),
-    Path.layer,
-  );
+const rawDoc = (id: string, extra: object = {}) => ({
+  id,
+  title: `Title ${id}`,
+  source: "test",
+  url: "",
+  kind: "prose",
+  lines: ["a", "b"],
+  ...extra,
+});
 
 const silent = Logger.layer([]);
 
-const layerWith = (fs: Layer.Layer<FileSystem.FileSystem | Path.Path>) =>
-  Documents.layer.pipe(Layer.provide([PasteStore.layer, fs, silent]));
+const layerWith = (raw: ReadonlyArray<unknown>) =>
+  Layer.effect(Documents, Documents.make(raw)).pipe(Layer.provide([PasteStore.layerMemory, silent]));
 
-const DefaultFiles = { "b.json": docJson("bravo"), "a.json": docJson("alpha"), "notes.txt": "not a doc" };
-
-const run = <A, E>(
-  effect: Effect.Effect<A, E, Documents>,
-  fs: Layer.Layer<FileSystem.FileSystem | Path.Path> = fakeDocsDir(DefaultFiles),
-) => Effect.runPromise(Effect.provide(effect, layerWith(fs)));
+const run = <A, E>(effect: Effect.Effect<A, E, Documents>, raw: ReadonlyArray<unknown> = [rawDoc("alpha"), rawDoc("bravo")]) =>
+  Effect.runPromise(Effect.provide(effect, layerWith(raw)));
 
 const withDocuments = <A, E>(f: (documents: Documents["Service"]) => Effect.Effect<A, E>) =>
   Effect.gen(function* () {
@@ -36,7 +29,7 @@ const withDocuments = <A, E>(f: (documents: Documents["Service"]) => Effect.Effe
   });
 
 describe("catalog", () => {
-  test("loads every .json file in name order and ignores other files", async () => {
+  test("lists the catalog in order", async () => {
     const docs = await run(withDocuments((d) => d.list("s1")));
 
     expect(docs.map((d) => d.id)).toEqual(["alpha", "bravo"]);
@@ -48,23 +41,17 @@ describe("catalog", () => {
     expect(doc.title).toBe("Title bravo");
   });
 
-  test("an invalid doc file fails startup", async () => {
-    const fs = fakeDocsDir({ "bad.json": docJson("bad", { kind: "pdf" }) });
-
-    await expect(run(withDocuments(Effect.succeed), fs)).rejects.toThrow();
+  test("an invalid catalog doc fails startup", async () => {
+    await expect(run(withDocuments(Effect.succeed), [rawDoc("bad", { kind: "pdf" })])).rejects.toThrow();
   });
 
-  test("malformed JSON fails startup", async () => {
-    await expect(run(withDocuments(Effect.succeed), fakeDocsDir({ "bad.json": "{" }))).rejects.toThrow();
-  });
-
-  test("the bundled docs/ folder decodes", async () => {
+  test("the bundled docs/ catalog decodes", async () => {
     const docs = await run(
       withDocuments((d) => d.list("s1")),
-      BunServices.layer,
+      catalog,
     );
 
-    expect(docs.length).toBeGreaterThan(0);
+    expect(docs).toHaveLength(catalog.length);
     for (const doc of docs) expect(doc.lines.length).toBeGreaterThan(0);
   });
 
@@ -132,8 +119,8 @@ describe("paste", () => {
     );
 
     expect(titled.title).toBe("t".repeat(80));
-    expect(untitled.title).toBe(`Pasted document ${untitled.id.split("-")[1]}`);
-    expect(titled.id).not.toBe(untitled.id);
+    expect(untitled.title).toBe("Pasted document 2");
+    expect([titled.id, untitled.id]).toEqual(["pasted-1", "pasted-2"]);
   });
 
   test("pastes are private to the pasting session", async () => {

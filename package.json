@@ -3,13 +3,17 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "bun --env-file=.env server.ts",
+    "dev": "alchemy dev",
+    "deploy": "alchemy deploy",
+    "destroy": "alchemy destroy",
     "typecheck": "tsc",
     "test": "bun test"
   },
   "dependencies": {
     "@effect/ai-typesafe": "4.0.1",
     "@effect/platform-bun": "4.0.1",
+    "@effect/platform-node": "4.0.1",
+    "alchemy": "^2.0.0-beta.81",
     "effect": "4.0.1"
   },
   "devDependencies": {

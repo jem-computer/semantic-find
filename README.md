@@ -4,8 +4,8 @@ Ask a document a question in plain English and get a heatmap of where the
 answer lives, plus a "not in this document" verdict when it isn't there.
 
 Built on [TypeSafe](https://docs.typesafe.ai)'s `jev-latest` System One model
-through Effect's `DecisionModel` (`@effect/ai-typesafe`), served with
-`@effect/platform-bun`.
+through Effect's `DecisionModel` (`@effect/ai-typesafe`), served as a
+Cloudflare Worker deployed with [Alchemy](https://alchemy.run).
 
 ## Run
 
@@ -14,11 +14,14 @@ Requires [Bun](https://bun.sh) and a TypeSafe API key.
 ```sh
 bun install
 cp .env.example .env   # then set TYPESAFE_API_KEY
-bun run dev
+bun run dev            # local Worker on http://localhost:1337
+bun run test
 bun run typecheck
 ```
 
-Serves on http://localhost:4310 (override with `PORT`).
+Deploy with `bun run deploy` (needs a Cloudflare login; `TYPESAFE_API_KEY` is
+read from your environment and bound to the Worker as a secret). Tear down
+with `bun run destroy`.
 
 ## How it works
 
@@ -65,17 +68,21 @@ Sample documents live in `docs/*.json`, each a list of lines with a `kind`
   question, which reads code more reliably than "does any line answer this?"
 
 **Paste your own** from the sidebar. Text is split into lines server-side
-(`lib/chunk.ts`, up to 240 lines / 60k characters) and held in memory,
-private to the pasting browser session. Choose **code** to keep lines
+(`lib/chunk.ts`, up to 240 lines / 60k characters) and stored in a Durable
+Object per browser session, private to that session and deleted after two
+idle hours. Choose **code** to keep lines
 verbatim, with indentation preserved and syntax highlighting.
 
 ## Layout
 
-- `server.ts`: layer wiring and entry point (`Layer.launch`)
-- `lib/Routes.ts`: HTTP routes, session cookie, static files
+- `alchemy.run.ts`: the Alchemy stack (deploys the Worker)
+- `lib/RouterWorker.ts`: the Worker: assets, secret, and layer wiring
+- `lib/Routes.ts`: HTTP routes and the session-cookie page route
 - `lib/Search.ts`: `Search` service and the TypeSafe decision definitions
 - `lib/Documents.ts`: `Documents` service (sample catalog + pastes)
-- `lib/PasteStore.ts`: per-session pasted documents
+- `lib/PasteStore.ts`: the pasted-documents contract (+ in-memory version for tests)
+- `lib/PasteSession.ts`: the per-session Durable Object behind it
 - `lib/Document.ts`: document schema and errors
+- `docs/index.ts`: bundles the sample docs into the Worker
 - `lib/chunk.ts`: text and code → lines
 - `public/`: vanilla JS frontend (document view, heatmap, minimap)

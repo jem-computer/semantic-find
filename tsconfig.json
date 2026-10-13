@@ -3,13 +3,24 @@
     "target": "ESNext",
     "module": "Preserve",
     "moduleResolution": "bundler",
-    "lib": ["ESNext"],
-    "types": ["bun"],
+    "lib": [
+      "ESNext"
+    ],
+    "types": [
+      "bun",
+      "@cloudflare/workers-types"
+    ],
     "strict": true,
     "exactOptionalPropertyTypes": true,
     "noEmit": true,
     "skipLibCheck": true,
-    "allowImportingTsExtensions": true
+    "allowImportingTsExtensions": true,
+    "resolveJsonModule": true
   },
-  "include": ["server.ts", "lib", "test"]
+  "include": [
+    "alchemy.run.ts",
+    "lib",
+    "docs",
+    "test"
+  ]
 }

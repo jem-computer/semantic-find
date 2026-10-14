@@ -1,5 +1,6 @@
 import { Runtime } from 'foldkit'
 
+import './style/theme'
 import { Message, Model, init, subscriptions, update, view } from './main'
 
 const application = Runtime.makeApplication({

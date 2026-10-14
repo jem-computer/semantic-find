@@ -2,11 +2,13 @@ import { Option } from 'effect'
 import type { Html, HtmlBuilder } from 'foldkit/html'
 
 import { Button, Dialog, Input, Textarea } from '@foldkit/ui'
+import { css } from '@pleat/foldkit'
 
 import { PASTE_TEXT_ID, PASTE_TITLE_ID } from '../ids'
 import { Message } from '../message'
 import { type PasteForm, type PasteKind, PasteStatus } from '../model'
 import { PasteKindRadioGroup } from '../radioGroups'
+import * as PasteStyle from '../style/paste'
 import { segmentedToggleView } from './toggle'
 
 const PASTE_KINDS: ReadonlyArray<PasteKind> = ['Auto', 'Code']
@@ -47,7 +49,7 @@ const kindToggleView = (form: PasteForm, h: HtmlBuilder<Message>): Html =>
         {
           labels: PASTE_KIND_LABELS,
           titles: PASTE_KIND_TITLES,
-          className: 'paste-kind',
+          groupStyle: PasteStyle.kindToggle,
         },
         h,
       ),
@@ -63,12 +65,12 @@ const formView = (
 ): Html =>
   h.form(
     [
-      h.Class('paste-form'),
+      ...css(PasteStyle.form, ...PasteStyle.pinkSurfaceBindings),
       h.AriaLabel('paste a document'),
       h.OnSubmit(Message.SubmittedPaste()),
     ],
     [
-      h.h2([...title, h.Class('field-label')], ['paste a document']),
+      h.h2([...title, ...css(PasteStyle.title)], ['paste a document']),
       Input.view(
         {
           id: PASTE_TITLE_ID,
@@ -78,7 +80,7 @@ const formView = (
           toView: ({ input }) =>
             h.input([
               ...input,
-              h.Class('paste-field'),
+              ...css(PasteStyle.field),
               h.AriaLabel('title'),
               h.Maxlength(TITLE_MAX_LENGTH),
             ]),
@@ -96,7 +98,7 @@ const formView = (
           toView: ({ textarea }) =>
             h.textarea([
               ...textarea,
-              h.Class('paste-field paste-text'),
+              ...css(PasteStyle.text),
               h.AriaLabel('document text'),
             ]),
         },
@@ -104,14 +106,14 @@ const formView = (
       ),
       kindToggleView(form, h),
       h.div(
-        [h.Class('paste-actions')],
+        [...css(PasteStyle.actions)],
         [
           h.span(
-            [h.Class('paste-hint'), h.Role('status')],
+            [...css(PasteStyle.hint), h.Role('status')],
             [hintText(form.status)],
           ),
           h.button(
-            [...closeButton, h.Type('button'), h.Class('paste-cancel')],
+            [...closeButton, h.Type('button'), ...css(PasteStyle.cancel)],
             ['cancel'],
           ),
           Button.view(
@@ -120,7 +122,7 @@ const formView = (
               isDisabled: PasteStatus.guards.Submitting(form.status),
               toView: ({ button }) =>
                 h.button(
-                  [...button, h.Class('paste-submit')],
+                  [...button, ...css(PasteStyle.submit)],
                   ['add document'],
                 ),
             },
@@ -142,12 +144,12 @@ export const pasteDialogView = (
     viewInputs: {
       toView: renderInfo =>
         h.dialog(
-          [...renderInfo.dialog, h.Class('paste-dialog')],
+          [...renderInfo.dialog, ...css(PasteStyle.dialog)],
           renderInfo.isVisible
             ? [
-                h.div([...renderInfo.backdrop, h.Class('paste-backdrop')]),
+                h.div([...renderInfo.backdrop, ...css(PasteStyle.backdrop)]),
                 h.div(
-                  [...renderInfo.panel, h.Class('paste-panel')],
+                  [...renderInfo.panel, ...css(PasteStyle.panel)],
                   [formView(form, renderInfo, h)],
                 ),
               ]

@@ -2,10 +2,14 @@ import { Array, Option, pipe } from 'effect'
 import { AsyncData, Canvas } from 'foldkit'
 import type { Html, HtmlBuilder } from 'foldkit/html'
 
+import { Var } from '@pleat/core'
+import { css, cssClass } from '@pleat/foldkit'
+
 import { Layout, type Search } from '../domain'
 import { MINIMAP_ID } from '../ids'
 import { Message } from '../message'
 import type { Model } from '../model'
+import * as MinimapStyle from '../style/minimap'
 
 const CANVAS_WIDTH = 120
 const CANVAS_HEIGHT = 1200
@@ -17,7 +21,6 @@ const DENSITY_FULL_LENGTH = 560
 const DENSITY_FILL = 'rgba(30, 30, 30, 0.16)'
 const HEAT_ALPHA = 0.9
 const DIMMED_HEAT_ALPHA = 0.25
-const PERCENT = 100
 
 const heatFill = (alpha: number): string => `rgba(229, 81, 186, ${alpha})`
 
@@ -72,11 +75,11 @@ const viewportView = (
 ): Html => {
   const { topFraction, heightFraction } = Layout.viewportBox(layout, scrollTop)
   return h.div([
-    h.Class('minimap-viewport'),
-    h.Style({
-      top: `${topFraction * PERCENT}%`,
-      height: `${heightFraction * PERCENT}%`,
-    }),
+    ...css(
+      MinimapStyle.viewport,
+      Var.bind(MinimapStyle.viewportTop, topFraction),
+      Var.bind(MinimapStyle.viewportHeight, heightFraction),
+    ),
   ])
 }
 
@@ -95,12 +98,13 @@ export const minimapView = (
   )
 
   return h.div(
-    [h.Id(MINIMAP_ID), h.Class('minimap'), h.AriaHidden(true)],
+    [h.Id(MINIMAP_ID), ...css(MinimapStyle.minimap), h.AriaHidden(true)],
     [
       Canvas.view(
         {
           width: CANVAS_WIDTH,
           height: CANVAS_HEIGHT,
+          className: cssClass(MinimapStyle.canvas),
           shapes: Option.match(
             Option.all({ layout: maybeLayout, texts: maybeTexts }),
             {

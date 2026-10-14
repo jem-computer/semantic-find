@@ -14,7 +14,8 @@
   "dependencies": {
     "@effect/platform-browser": "4.0.0",
     "@foldkit/ui": "0.166.0",
-    "clsx": "^2.1.1",
+    "@pleat/core": "workspace:*",
+    "@pleat/foldkit": "workspace:*",
     "effect": "4.0.0",
     "foldkit": "0.166.0",
     "highlight.js": "^11.11.1"

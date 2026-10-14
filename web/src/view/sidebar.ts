@@ -1,15 +1,18 @@
-import { clsx } from 'clsx'
 import { Array, Option } from 'effect'
 import { AsyncData } from 'foldkit'
 import type { Html, HtmlBuilder } from 'foldkit/html'
 
 import { Button, Input, Select } from '@foldkit/ui'
+import { Style, Var } from '@pleat/core'
+import { css } from '@pleat/foldkit'
 
 import { Doc, Search, Suggestions } from '../domain'
 import { DOC_SELECT_ID, QUERY_ID } from '../ids'
 import { Message } from '../message'
 import type { Model } from '../model'
 import { ModeRadioGroup } from '../radioGroups'
+import * as SidebarStyle from '../style/sidebar'
+import { fieldLabel, metaEmphasis, metaText } from '../style/theme'
 import { externalLinkView } from './externalLink'
 import { segmentedToggleView } from './toggle'
 
@@ -38,20 +41,18 @@ const VERDICT_LABELS: Record<Search.Verdict, string> = {
   Absent: 'not in this document',
 }
 
-const VERDICT_CLASSES: Record<Search.Verdict, string> = {
-  Answered: 'found',
-  Partial: 'partial',
-  Absent: 'absent',
-}
-
 // BRAND
 
 const brandView = (h: HtmlBuilder<Message>): Html =>
   h.header(
-    [h.Class('brand')],
+    [...css(SidebarStyle.brand)],
     [
-      h.img([h.Src('/typesafe_logo.svg'), h.Alt('TypeSafe'), h.Class('logo')]),
-      h.div([h.Class('app-name')], ['semantic find']),
+      h.img([
+        h.Src('/typesafe_logo.svg'),
+        h.Alt('TypeSafe'),
+        ...css(SidebarStyle.logo),
+      ]),
+      h.div([...css(SidebarStyle.appName)], ['semantic find']),
     ],
   )
 
@@ -79,12 +80,16 @@ const docPickerView = (model: Model, h: HtmlBuilder<Message>): Html =>
         h.div(
           [],
           [
-            h.label([...label, h.Class('field-label')], ['document']),
+            h.label([...label, ...css(fieldLabel)], ['document']),
             h.div(
-              [h.Class('select-wrap')],
+              [],
               [
                 h.select(
-                  [...select, h.AriaBusy(AsyncData.isPending(model.docList))],
+                  [
+                    ...select,
+                    ...css(SidebarStyle.docSelect),
+                    h.AriaBusy(AsyncData.isPending(model.docList)),
+                  ],
                   Option.match(AsyncData.getData(model.docList), {
                     onNone: () => [],
                     onSome: docs => docOptionsView(docs, h),
@@ -103,7 +108,7 @@ const docListErrorView = (model: Model, h: HtmlBuilder<Message>): Html =>
     onNone: () => h.empty,
     onSome: error =>
       h.p(
-        [h.Class('verdict-meta'), h.Role('alert')],
+        [...css(metaText), h.Role('alert')],
         [`couldn’t load documents · ${error}`],
       ),
   })
@@ -113,7 +118,10 @@ const pasteOpenView = (h: HtmlBuilder<Message>): Html =>
     {
       onClick: Message.ClickedOpenPaste(),
       toView: ({ button }) =>
-        h.button([...button, h.Class('paste-open')], ['+ paste your own']),
+        h.button(
+          [...button, ...css(SidebarStyle.pasteOpen)],
+          ['+ paste your own'],
+        ),
     },
     h,
   )
@@ -124,7 +132,7 @@ const searchFormView = (model: Model, h: HtmlBuilder<Message>): Html => {
   const isSearching = AsyncData.isPending(model.search)
 
   return h.form(
-    [h.Class('search-form'), h.OnSubmit(Message.SubmittedSearch())],
+    [...css(SidebarStyle.searchForm), h.OnSubmit(Message.SubmittedSearch())],
     [
       Input.view(
         {
@@ -136,18 +144,13 @@ const searchFormView = (model: Model, h: HtmlBuilder<Message>): Html => {
             h.div(
               [],
               [
-                h.label(
-                  [...label, h.Class('field-label')],
-                  ['ask the document'],
-                ),
+                h.label([...label, ...css(fieldLabel)], ['ask the document']),
                 h.div(
-                  [
-                    h.Class(clsx('search-box', { loading: isSearching })),
-                    h.AriaBusy(isSearching),
-                  ],
+                  [...css(SidebarStyle.searchBox), h.AriaBusy(isSearching)],
                   [
                     h.input([
                       ...input,
+                      ...css(SidebarStyle.queryInput),
                       h.Autocomplete('off'),
                       h.Spellcheck(false),
                     ]),
@@ -156,7 +159,16 @@ const searchFormView = (model: Model, h: HtmlBuilder<Message>): Html => {
                         type: 'submit',
                         isDisabled: isSearching,
                         toView: ({ button }) =>
-                          h.button([...button, h.AriaLabel('search')], ['→']),
+                          h.button(
+                            [
+                              ...button,
+                              ...css(
+                                SidebarStyle.searchButton({ isSearching }),
+                              ),
+                              h.AriaLabel('search'),
+                            ],
+                            ['→'],
+                          ),
                       },
                       h,
                     ),
@@ -182,7 +194,7 @@ const modeToggleView = (model: Model, h: HtmlBuilder<Message>): Html =>
       ariaLabel: 'search mode',
       orientation: 'Horizontal',
       toView: segmentedToggleView(
-        { labels: MODE_LABELS, titles: MODE_TITLES, className: '' },
+        { labels: MODE_LABELS, titles: MODE_TITLES, groupStyle: Style.empty },
         h,
       ),
     },
@@ -191,13 +203,17 @@ const modeToggleView = (model: Model, h: HtmlBuilder<Message>): Html =>
 
 const suggestionsView = (docId: string, h: HtmlBuilder<Message>): Html =>
   h.div(
-    [h.Class('suggestions')],
+    [...css(SidebarStyle.suggestions)],
     Array.map(Suggestions.suggestionsFor(docId), query =>
       Button.view(
         {
           onClick: Message.ClickedSuggestion({ query }),
           toView: ({ button }) =>
-            h.keyed('button')(query, [...button], [query]),
+            h.keyed('button')(
+              query,
+              [...button, ...css(SidebarStyle.suggestion)],
+              [query],
+            ),
         },
         h,
       ),
@@ -212,19 +228,19 @@ const verdictView = (
   h: HtmlBuilder<Message>,
 ): Html =>
   h.div(
-    [h.Class('verdict'), h.Role('status')],
+    [...css(SidebarStyle.verdict), h.Role('status')],
     [
       h.div(
-        [h.Class(clsx('verdict-chip', VERDICT_CLASSES[verdict]))],
+        [...css(SidebarStyle.verdictChip({ verdict }))],
         [VERDICT_LABELS[verdict]],
       ),
       h.div(
-        [h.Class('verdict-meta')],
+        [...css(metaText)],
         [
           'exists ',
-          h.b([], [exists.toFixed(2)]),
+          h.b([...css(metaEmphasis)], [exists.toFixed(2)]),
           ' · ',
-          h.b([], [`${elapsedMs}ms`]),
+          h.b([...css(metaEmphasis)], [`${elapsedMs}ms`]),
           ` · ${inputTokens.toLocaleString()} tokens in · ${MODE_NAMES[mode]}`,
         ],
       ),
@@ -233,10 +249,13 @@ const verdictView = (
 
 const failedSearchView = (error: string, h: HtmlBuilder<Message>): Html =>
   h.div(
-    [h.Class('verdict'), h.Role('alert')],
+    [...css(SidebarStyle.verdict), h.Role('alert')],
     [
-      h.div([h.Class('verdict-chip absent')], ['request failed']),
-      h.div([h.Class('verdict-meta')], [error]),
+      h.div(
+        [...css(SidebarStyle.verdictChip({ verdict: 'Absent' }))],
+        ['request failed'],
+      ),
+      h.div([...css(metaText)], [error]),
     ],
   )
 
@@ -247,28 +266,38 @@ const topMatchView = (
 ): Html =>
   h.keyed('li')(
     Doc.lineId(lineIndex),
-    [],
+    [...css(SidebarStyle.matchItem)],
     [
       Button.view(
         {
           onClick: Message.ClickedMatch({ lineIndex }),
           toView: ({ button }) =>
             h.button(
-              [...button],
+              [...button, ...css(SidebarStyle.matchButton)],
               [
                 h.span(
-                  [h.Class('m-head')],
+                  [...css(SidebarStyle.matchHead)],
                   [
-                    h.span([h.Class('m-line')], [Doc.lineId(lineIndex)]),
-                    h.span([h.Class('m-score')], [badge]),
+                    h.span(
+                      [...css(SidebarStyle.matchLine)],
+                      [Doc.lineId(lineIndex)],
+                    ),
+                    h.span([...css(SidebarStyle.matchScore)], [badge]),
                   ],
                 ),
                 h.span(
-                  [h.Class('m-bar')],
-                  [h.i([h.Style({ width: `${barPercent}%` })])],
+                  [...css(SidebarStyle.matchBar)],
+                  [
+                    h.i([
+                      ...css(
+                        SidebarStyle.matchBarFill,
+                        Var.bind(SidebarStyle.barPercent, barPercent),
+                      ),
+                    ]),
+                  ],
                 ),
                 h.span(
-                  [h.Class('m-text')],
+                  [...css(SidebarStyle.matchText)],
                   [
                     Option.match(Array.get(lines, lineIndex), {
                       onNone: () => '',
@@ -293,14 +322,14 @@ const topMatchesView = (
     onEmpty: () => h.empty,
     onNonEmpty: matches =>
       h.div(
-        [h.Class('matches')],
+        [],
         [
           h.div(
-            [h.Class('field-label')],
+            [...css(fieldLabel)],
             [isAbsent ? 'closest lines · not answers' : 'top matches'],
           ),
           h.ol(
-            [],
+            [...css(SidebarStyle.matchList)],
             Array.map(matches, match => topMatchView(lines, match, h)),
           ),
         ],
@@ -359,7 +388,7 @@ const footerView = (
   h: HtmlBuilder<Message>,
 ): Html =>
   h.footer(
-    [h.Class('sidebar-foot')],
+    [...css(SidebarStyle.footer)],
     [
       Option.match(maybeLoadedDoc, {
         onNone: () => h.empty,
@@ -386,22 +415,27 @@ export const sidebarView = (
   const maybeLoadedDoc = AsyncData.getData(model.doc)
 
   return h.aside(
-    [h.Class('sidebar')],
+    [...css(SidebarStyle.sidebar, ...SidebarStyle.pinkSurfaceBindings)],
     [
-      brandView(h),
-      docPickerView(model, h),
-      docListErrorView(model, h),
-      pasteOpenView(h),
-      searchFormView(model, h),
-      modeToggleView(model, h),
-      Option.match(model.maybeSelectedDocId, {
-        onNone: () => h.empty,
-        onSome: docId => suggestionsView(docId, h),
-      }),
-      ...Option.match(maybeLoadedDoc, {
-        onNone: () => [],
-        onSome: loadedDoc => resultsView(model, maybeHeatmap, loadedDoc, h),
-      }),
+      h.div(
+        [...css(SidebarStyle.controls)],
+        [
+          brandView(h),
+          docPickerView(model, h),
+          docListErrorView(model, h),
+          pasteOpenView(h),
+          searchFormView(model, h),
+          modeToggleView(model, h),
+          Option.match(model.maybeSelectedDocId, {
+            onNone: () => h.empty,
+            onSome: docId => suggestionsView(docId, h),
+          }),
+          ...Option.match(maybeLoadedDoc, {
+            onNone: () => [],
+            onSome: loadedDoc => resultsView(model, maybeHeatmap, loadedDoc, h),
+          }),
+        ],
+      ),
       footerView(maybeLoadedDoc, h),
     ],
   )

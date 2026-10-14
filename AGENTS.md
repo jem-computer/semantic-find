@@ -46,3 +46,23 @@ git subtree pull --prefix=repos/foldkit https://github.com/foldkit/foldkit.git f
 
 Before finishing a frontend change, run all four from `web/`:
 `bun run format`, `bun run lint`, `bun run typecheck`, `bun run test`.
+
+### Pleat (`vendor/pleat/`)
+
+The frontend's styles use [Pleat](https://github.com/Manzanita-Research/pleat),
+which is not published to npm. It is vendored as a git subtree pinned to
+commit `7d579dcd63`, and `@pleat/core` and `@pleat/foldkit` are Bun workspace
+members read from source through their `@pleat/source` export condition (see
+`web/vite.config.ts`, `web/vitest.config.ts`, `web/tsconfig.json`). Unlike
+`repos/`, the app imports this code.
+
+- This bypasses the 7-day release-age rule in `bunfig.toml`; review the diff
+  before pulling a new commit.
+- The root `overrides` pins `foldkit` to `web/`'s version, because Pleat's
+  dev dependencies ask for a newer one.
+- Web tests run in Node rather than happy-dom: happy-dom's stylesheets lack
+  the cascade layers Pleat inserts rules into.
+
+```sh
+git subtree pull --prefix=vendor/pleat https://github.com/Manzanita-Research/pleat.git <commit> --squash
+```

@@ -1,16 +1,25 @@
-import { clsx } from 'clsx'
 import { Array, Match, Option, String } from 'effect'
 import { type Html, type HtmlBuilder, createKeyedLazy } from 'foldkit/html'
+
+import { Var } from '@pleat/core'
+import { css } from '@pleat/foldkit'
 
 import { Doc, LineMarkup } from '../domain'
 import { highlightLine } from '../highlight'
 import type { Message } from '../message'
+import * as DocumentStyle from '../style/document'
 import { externalLinkView } from './externalLink'
+
+const HEAT_DIGITS = 3
+
+export const LINE_DATA_ATTRIBUTE = 'line'
 
 const ZERO_WIDTH_SPACE = globalThis.String.fromCodePoint(0x200b)
 
+type Heading = 'None' | 'H1' | 'H2'
+
 type LineContent = Readonly<{
-  className: string
+  heading: Heading
   children: ReadonlyArray<Html | string>
 }>
 
@@ -22,8 +31,8 @@ const inlineView = (
     LineMarkup.InlineToken.match<Html | string>(token, {
       Plain: ({ text }) => text,
       Bold: ({ text }) => h.b([], [text]),
-      Italic: ({ text }) => h.em([], [text]),
-      Code: ({ text }) => h.code([], [text]),
+      Italic: ({ text }) => h.em([...css(DocumentStyle.emphasis)], [text]),
+      Code: ({ text }) => h.code([...css(DocumentStyle.inlineCode)], [text]),
       Link: ({ text, href }) => externalLinkView(href, text, h),
     }),
   )
@@ -34,12 +43,12 @@ const codeContent = (
   h: HtmlBuilder<Message>,
 ): LineContent => {
   if (String.isEmpty(text)) {
-    return { className: '', children: [ZERO_WIDTH_SPACE] }
+    return { heading: 'None', children: [ZERO_WIDTH_SPACE] }
   } else {
     return Option.match(maybeLanguage, {
-      onNone: () => ({ className: '', children: [text] }),
+      onNone: () => ({ heading: 'None', children: [text] }),
       onSome: language => ({
-        className: '',
+        heading: 'None',
         children: [h.span([h.InnerHTML(highlightLine(text, language))])],
       }),
     })
@@ -48,12 +57,12 @@ const codeContent = (
 
 const logContent = (text: string, h: HtmlBuilder<Message>): LineContent =>
   Option.match(LineMarkup.parseLogLine(text), {
-    onNone: () => ({ className: '', children: [text] }),
+    onNone: () => ({ heading: 'None', children: [text] }),
     onSome: ({ timestamp, level, rest }) => ({
-      className: '',
+      heading: 'None',
       children: [
         `${timestamp} `,
-        h.span([h.Class(`lv lv-${level}`)], [level]),
+        h.span([...css(DocumentStyle.logLevel({ level }))], [level]),
         rest,
       ],
     }),
@@ -68,14 +77,14 @@ const markdownContent = (text: string, h: HtmlBuilder<Message>): LineContent =>
     Match.when(
       line => MARKDOWN_H1.test(line),
       line => ({
-        className: 'line-h1',
+        heading: 'H1',
         children: inlineView(line.replace(MARKDOWN_H1, ''), h),
       }),
     ),
     Match.when(
       line => MARKDOWN_H2.test(line),
       line => ({
-        className: 'line-h2',
+        heading: 'H2',
         children: inlineView(line.replace(MARKDOWN_H2, ''), h),
       }),
     ),
@@ -83,7 +92,7 @@ const markdownContent = (text: string, h: HtmlBuilder<Message>): LineContent =>
   )
 
 const proseContent = (text: string, h: HtmlBuilder<Message>): LineContent => ({
-  className: LineMarkup.isProseHeading(text) ? 'line-h2' : '',
+  heading: LineMarkup.isProseHeading(text) ? 'H2' : 'None',
   children: inlineView(text, h),
 })
 
@@ -113,20 +122,24 @@ const lineView = (
   isFlashed: boolean,
   h: HtmlBuilder<Message>,
 ): Html => {
-  const { className, children } = lineContent(text, kind, maybeCodeLanguage, h)
+  const { heading, children } = lineContent(text, kind, maybeCodeLanguage, h)
   const id = Doc.lineId(lineIndex)
 
   return h.keyed('p')(
     id,
     [
       h.Id(id),
-      h.Class(clsx('doc-line', className, { hot: isHot, flash: isFlashed })),
-      h.Style({
-        '--heat': heat.toFixed(3),
-        '--edge': isHot ? '1' : '0',
-      }),
+      h.DataAttribute(LINE_DATA_ATTRIBUTE, ''),
+      ...css(
+        DocumentStyle.line({ kind, heading, isFlashed }),
+        Var.bind(DocumentStyle.heat, Number(heat.toFixed(HEAT_DIGITS))),
+        Var.bind(DocumentStyle.edge, isHot ? 1 : 0),
+      ),
     ],
-    [h.span([h.Class('pct')], [badge]), ...children],
+    [
+      h.span([...css(DocumentStyle.badge({ isVisible: isHot }))], [badge]),
+      ...children,
+    ],
   )
 }
 

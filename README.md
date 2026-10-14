@@ -106,4 +106,7 @@ verbatim, with indentation preserved and syntax highlighting.
   - `src/main.ts`: init, update, Subscriptions; `src/view/`: views
   - `src/command.ts`: API calls, scrolling, the line flash timer
   - `src/domain/`: heat maths, minimap layout, inline markdown, highlighting
+  - `src/style/`: [Pleat](https://github.com/Manzanita-Research/pleat) styles
+    and design tokens; `src/styles.css` only imports fonts and the
+    highlight.js theme
   - `worker/worker.ts`: forwards `/api/*` to the API Worker

@@ -1,13 +1,15 @@
-import { clsx } from 'clsx'
 import { Array, Effect, Option, Queue, Stream } from 'effect'
 import { AsyncData, Mount } from 'foldkit'
 import type { Html, HtmlBuilder } from 'foldkit/html'
+
+import { css } from '@pleat/foldkit'
 
 import { type Doc, type Layout, Search } from '../domain'
 import { DOC_SCROLL_ID } from '../ids'
 import { Message } from '../message'
 import type { Model } from '../model'
-import { memoLineView } from './line'
+import * as DocumentStyle from '../style/document'
+import { LINE_DATA_ATTRIBUTE, memoLineView } from './line'
 import { minimapView } from './minimap'
 
 // MOUNT
@@ -18,7 +20,9 @@ const measureLayout = (scroller: HTMLElement): Layout.DocLayout => {
     scrollHeight: scroller.scrollHeight,
     clientHeight: scroller.clientHeight,
     lines: Array.map(
-      Array.fromIterable(scroller.querySelectorAll('.doc-line')),
+      Array.fromIterable(
+        scroller.querySelectorAll(`[data-${LINE_DATA_ATTRIBUTE}]`),
+      ),
       line => {
         const { top, height } = line.getBoundingClientRect()
         return { top: top - scrollerTop, height }
@@ -102,23 +106,21 @@ const loadedDocView = (
     doc.id,
     [
       h.Id(DOC_SCROLL_ID),
-      h.Class('doc-scroll'),
+      ...css(DocumentStyle.docScroll),
       h.OnScroll(scrollTop => Message.ScrolledDoc({ scrollTop })),
       h.OnMount(ObserveDocLayout()),
     ],
     [
       h.article(
         [
-          h.Class(
-            clsx('doc', {
-              'kind-log': doc.kind === 'Log',
-              'kind-code': doc.kind === 'Code',
-              dimmed: Option.exists(maybeHeatmap, ({ isAbsent }) => isAbsent),
+          ...css(
+            DocumentStyle.doc({
+              isDimmed: Option.exists(maybeHeatmap, ({ isAbsent }) => isAbsent),
             }),
           ),
         ],
         [
-          h.h1([], [doc.title]),
+          h.h1([...css(DocumentStyle.docTitle)], [doc.title]),
           h.div([], docLinesView(loadedDoc, maybeHeatmap, model.maybeFlash, h)),
         ],
       ),
@@ -128,19 +130,24 @@ const loadedDocView = (
 
 const loadingView = (h: HtmlBuilder<Message>): Html =>
   h.div(
-    [h.Class('doc-scroll'), h.AriaBusy(true)],
-    [h.article([h.Class('doc')], [h.p([h.Class('doc-status')], ['loading…'])])],
+    [...css(DocumentStyle.docScroll), h.AriaBusy(true)],
+    [
+      h.article(
+        [...css(DocumentStyle.doc({ isDimmed: false }))],
+        [h.p([...css(DocumentStyle.docStatus)], ['loading…'])],
+      ),
+    ],
   )
 
 const failedView = (error: string, h: HtmlBuilder<Message>): Html =>
   h.div(
-    [h.Class('doc-scroll')],
+    [...css(DocumentStyle.docScroll)],
     [
       h.article(
-        [h.Class('doc')],
+        [...css(DocumentStyle.doc({ isDimmed: false }))],
         [
           h.p(
-            [h.Class('doc-status'), h.Role('alert')],
+            [...css(DocumentStyle.docStatus), h.Role('alert')],
             [`couldn’t load document · ${error}`],
           ),
         ],
@@ -154,7 +161,7 @@ export const documentPaneView = (
   h: HtmlBuilder<Message>,
 ): Html =>
   h.main(
-    [h.Class('doc-pane')],
+    [...css(DocumentStyle.docPane)],
     [
       AsyncData.match(model.doc, {
         onIdle: () => loadingView(h),

@@ -17,7 +17,7 @@ const minimapFraction = (clientY: number): Option.Option<number> =>
 
 const minimapDragStreams: ReadonlyArray<Stream.Stream<Message>> = [
   Subscription.fromEventFilterMap({
-    target: document,
+    target: () => document,
     type: 'pointermove',
     filterMapEvent: ({ clientY }) =>
       Option.map(minimapFraction(clientY), fraction =>
@@ -25,12 +25,12 @@ const minimapDragStreams: ReadonlyArray<Stream.Stream<Message>> = [
       ),
   }),
   Subscription.fromEvent({
-    target: document,
+    target: () => document,
     type: 'pointerup',
     mapEvent: () => Message.ReleasedMinimap(),
   }),
   Subscription.fromEvent({
-    target: document,
+    target: () => document,
     type: 'pointercancel',
     mapEvent: () => Message.ReleasedMinimap(),
   }),

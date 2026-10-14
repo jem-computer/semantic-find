@@ -10,7 +10,9 @@
     "esModuleInterop": true,
     "exactOptionalPropertyTypes": true,
     "isolatedModules": true,
-    "noEmit": true
+    "noEmit": true,
+    "customConditions": ["@pleat/source"],
+    "allowImportingTsExtensions": true
   },
   "include": ["src/**/*"]
 }

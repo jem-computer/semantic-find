@@ -14,25 +14,33 @@ export const tokens = Token.make({
     line: Token.color,
     hairline: Token.color,
   },
-  heatRgb: Token.value,
   font: { mono: Token.fontFamily, sans: Token.fontFamily },
 })
 
-const INK = 'rgb(30 30 30 / 0.86)'
+// OKLCH components of the colours that also appear with an alpha.
+export const NEAR_BLACK = '0.235 0 0'
+export const NEON_PINK = '0.667 0.2131 341.16'
+
+export const nearBlack = (alpha: number | string): string =>
+  `oklch(${NEAR_BLACK} / ${alpha})`
+
+export const neonPink = (alpha: number | string): string =>
+  `oklch(${NEON_PINK} / ${alpha})`
+
+const INK = nearBlack(0.86)
 
 export const brand = Theme.make(tokens, {
   color: {
-    softPink: '#F386A1',
-    neonPink: '#E551BA',
-    black: '#1E1E1E',
-    white: '#FEFEFE',
-    demurGray: '#ABBAB9',
+    softPink: 'oklch(0.7459 0.1353 5.06)',
+    neonPink: `oklch(${NEON_PINK})`,
+    black: `oklch(${NEAR_BLACK})`,
+    white: 'oklch(0.997 0 0)',
+    demurGray: 'oklch(0.777 0.0167 191.98)',
     ink: INK,
-    muted: 'rgb(30 30 30 / 0.66)',
-    line: 'rgb(30 30 30 / 0.22)',
-    hairline: 'rgb(30 30 30 / 0.08)',
+    muted: nearBlack(0.66),
+    line: nearBlack(0.22),
+    hairline: nearBlack(0.08),
   },
-  heatRgb: '229, 81, 186',
   font: {
     mono: '"JetBrains Mono", ui-monospace, monospace',
     sans: '"Die Grotesk C", "Inter Tight", "Helvetica Neue", Helvetica, Arial, sans-serif',
@@ -42,7 +50,7 @@ export const brand = Theme.make(tokens, {
 // NOTE: Soft Pink surfaces carry one text color (Faded Black); hierarchy comes
 // from size, case, and weight, so muted text and lines darken there.
 export const pinkSurface = Theme.extend(brand, tokens, {
-  color: { muted: INK, line: 'rgb(30 30 30 / 0.55)' },
+  color: { muted: INK, line: nearBlack(0.55) },
 })
 
 export const NARROW = When.maxWidth('900px')

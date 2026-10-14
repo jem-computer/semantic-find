@@ -10,6 +10,7 @@ import { MINIMAP_ID } from '../ids'
 import { Message } from '../message'
 import type { Model } from '../model'
 import * as MinimapStyle from '../style/minimap'
+import { nearBlack, neonPink } from '../style/theme'
 
 const CANVAS_WIDTH = 120
 const CANVAS_HEIGHT = 1200
@@ -18,11 +19,9 @@ const MIN_LINE_HEIGHT = 1.5
 const LINE_GAP = 0.75
 const HEAT_BLEED = 0.5
 const DENSITY_FULL_LENGTH = 560
-const DENSITY_FILL = 'rgba(30, 30, 30, 0.16)'
+const DENSITY_FILL = nearBlack(0.16)
 const HEAT_ALPHA = 0.9
 const DIMMED_HEAT_ALPHA = 0.25
-
-const heatFill = (alpha: number): string => `rgba(229, 81, 186, ${alpha})`
 
 const lineShapes = (
   { scrollHeight, lines }: Layout.DocLayout,
@@ -60,7 +59,7 @@ const lineShapes = (
           y: y - HEAT_BLEED,
           width: CANVAS_WIDTH,
           height: rowHeight + HEAT_BLEED * 2,
-          fill: heatFill(heat * heatAlpha),
+          fill: neonPink(heat * heatAlpha),
         }),
       ),
     )

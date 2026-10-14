@@ -1,6 +1,6 @@
 import { Style, Theme, When } from '@pleat/core'
 
-import { fieldLabel, focusRing, pinkSurface, tokens } from './theme'
+import { fieldLabel, focusRing, nearBlack, pinkSurface, tokens } from './theme'
 
 export const dialog = Style.make({}).pipe(
   Style.when(When.open, {
@@ -14,7 +14,7 @@ export const dialog = Style.make({}).pipe(
 export const backdrop = Style.make({
   position: 'fixed',
   inset: 0,
-  background: 'rgba(30, 30, 30, .35)',
+  background: nearBlack(0.35),
 })
 
 export const panel = Style.make({

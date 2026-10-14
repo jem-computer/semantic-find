@@ -55,7 +55,7 @@ export const appName = Style.make({
 // DOCUMENT PICKER
 
 const CHEVRON =
-  "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%231E1E1E' fill='none' stroke-width='1.5'/%3E%3C/svg%3E\")"
+  "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='oklch(0.235%200%200)' fill='none' stroke-width='1.5'/%3E%3C/svg%3E\")"
 
 export const docSelect = Style.make({
   width: '100%',

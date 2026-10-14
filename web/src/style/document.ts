@@ -1,6 +1,6 @@
 import { Recipe, Style, Var, When } from '@pleat/core'
 
-import { NARROW, link, tokens } from './theme'
+import { NARROW, link, nearBlack, neonPink, tokens } from './theme'
 
 // LAYOUT
 
@@ -70,12 +70,12 @@ export const line = Recipe.make({
     padding: '.3rem .65rem',
     borderRadius: 2,
     font: `500 .95rem/1.55 ${tokens.font.sans}`,
-    background: `rgba(${tokens.heatRgb}, calc(${heat} * ${HEAT_ALPHA}))`,
-    boxShadow: `inset 3px 0 0 rgba(30, 30, 30, ${edge})`,
+    background: neonPink(`calc(${heat} * ${HEAT_ALPHA})`),
+    boxShadow: `inset 3px 0 0 ${nearBlack(edge.toString())}`,
     transition: 'background .5s ease, box-shadow .5s ease',
   }).pipe(
     Style.when(When.within(dimmedDoc), {
-      background: `rgba(${tokens.heatRgb}, calc(${heat} * ${DIMMED_HEAT_ALPHA}))`,
+      background: neonPink(`calc(${heat} * ${DIMMED_HEAT_ALPHA})`),
     }),
   ),
   variants: {

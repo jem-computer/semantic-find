@@ -1,6 +1,6 @@
 import { Style, Var } from '@pleat/core'
 
-import { NARROW, tokens } from './theme'
+import { NARROW, nearBlack, tokens } from './theme'
 
 export const minimap = Style.make({
   position: 'relative',
@@ -28,9 +28,9 @@ export const viewport = Style.make({
   right: 0,
   top: `calc(${viewportTop} * 100%)`,
   height: `calc(${viewportHeight} * 100%)`,
-  border: '1px solid rgba(30, 30, 30, .3)',
+  border: `1px solid ${nearBlack(0.3)}`,
   borderLeft: 0,
   borderRight: 0,
-  background: 'rgba(30, 30, 30, .06)',
+  background: nearBlack(0.06),
   pointerEvents: 'none',
 })

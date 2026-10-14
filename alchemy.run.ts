@@ -1,13 +1,12 @@
 import * as Alchemy from 'alchemy'
 import * as Cloudflare from 'alchemy/Cloudflare'
-import * as State from 'alchemy/State'
 import * as Effect from 'effect/Effect'
 
 import RouterWorker from './lib/RouterWorker'
 
 export default Alchemy.Stack('HeatmapSearchExample', {
     providers: Cloudflare.providers(),
-    state: State.localState()
+    state: Cloudflare.state(),
 }, Effect.gen(function* (){
     const api = yield* RouterWorker
 

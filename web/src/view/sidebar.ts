@@ -410,7 +410,9 @@ const creditView = (h: HtmlBuilder<Message>): Html =>
   h.span(
     [],
     [
-      'based on an example by ',
+      'by ',
+      externalLinkView('https://twitter.com/sheherenow_', 'Jem', h),
+      ' · based on an example by ',
       externalLinkView('https://typesafe.ai', 'TypeSafe', h),
       ' / ',
       externalLinkView('https://x.com/allietheicon', '@allietheicon', h),

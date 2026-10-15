@@ -402,6 +402,21 @@ const footerView = (
           '“which line?” + “does one exist?”',
         ],
       ),
+      creditView(h),
+    ],
+  )
+
+const creditView = (h: HtmlBuilder<Message>): Html =>
+  h.span(
+    [],
+    [
+      'based on an example by ',
+      externalLinkView('https://typesafe.ai', 'TypeSafe', h),
+      ' / ',
+      externalLinkView('https://x.com/allietheicon', '@allietheicon', h),
+      ',',
+      h.br([]),
+      'adapted to the CAFE stack (Cloudflare, Alchemy, Foldkit, Effect)',
     ],
   )
 

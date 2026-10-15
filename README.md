@@ -3,10 +3,14 @@
 Ask a document a question in plain English and get a heatmap of where the
 answer lives, plus a "not in this document" verdict when it isn't there.
 
-Built on [TypeSafe](https://docs.typesafe.ai)'s `jev-latest` System One model
-through Effect's `DecisionModel` (`@effect/ai-typesafe`). The frontend is a
-[Foldkit](https://foldkit.dev) app; both deploy to Cloudflare Workers with
-[Alchemy](https://alchemy.run).
+Based on an example by [TypeSafe](https://typesafe.ai) and
+[@allietheicon](https://x.com/allietheicon), adapted to the CAFE stack:
+[Cloudflare](https://workers.cloudflare.com) Workers, [Alchemy](https://alchemy.run),
+[Foldkit](https://foldkit.dev), and [Effect](https://effect.website).
+
+Built on TypeSafe's `jev-latest` System One model through Effect's
+`DecisionModel` (`@effect/ai-typesafe`). The frontend is a Foldkit app; both
+deploy to Cloudflare Workers with Alchemy.
 
 ## Run
 
